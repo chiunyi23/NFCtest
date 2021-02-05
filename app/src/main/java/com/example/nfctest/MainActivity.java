@@ -50,178 +50,187 @@ public class MainActivity extends AppCompatActivity {
 
         if (getIntent() != null) {
             mNfcInfoText.setText("NFC opening!");
-            onNewIntent(getIntent());
+            processIntent(getIntent());
         }
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (intent != null) {
+            processIntent(intent);
+        }
+    }
+    private void processIntent(Intent intent) {
         /*
         if (intent != null) {
             processIntent(intent);
         }*/
 
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
-            mNfcInfoText.setText("in new");
-            StringBuilder nfcInfo = new StringBuilder();
-            byte[] extraId = intent.getByteArrayExtra(NfcAdapter.EXTRA_ID);
-            if (extraId != null) {
-                nfcInfo.append("ID (hex): ").append(encodeHexString(extraId)).append("\n");
-            }
-            // Tag info
-            Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+        mNfcInfoText.setText("NFC on! not reading");
 
-            // Technologies
-            StringBuilder technologiesAvailable = new StringBuilder("Technologies Available: \n");
+        if (!NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
+            Toast.makeText(this, "Invalid action", Toast.LENGTH_LONG).show();
+            return;
+        }
+        mNfcInfoText.setText("in new");
+        StringBuilder nfcInfo = new StringBuilder();
+        byte[] extraId = intent.getByteArrayExtra(NfcAdapter.EXTRA_ID);
+        if (extraId != null) {
+            nfcInfo.append("ID (hex): ").append(encodeHexString(extraId)).append("\n");
+        }
+        // Tag info
+        Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
 
-            // Card type.
-            StringBuilder cardType = new StringBuilder("Card Type: \n");
+        // Technologies
+        StringBuilder technologiesAvailable = new StringBuilder("Technologies Available: \n");
 
-            // Sector and block.
-            StringBuilder sectorAndBlock = new StringBuilder("Storage: \n");
+        // Card type.
+        StringBuilder cardType = new StringBuilder("Card Type: \n");
 
-            // Sector check
-            StringBuilder sectorCheck = new StringBuilder("Sector check: \n");
+        // Sector and block.
+        StringBuilder sectorAndBlock = new StringBuilder("Storage: \n");
 
-            int idx = 0;
-            for (String tech : tag.getTechList()) {
-                if (tech.equals(MifareClassic.class.getName())) {
-                    // Mifare Classic
-                    MifareClassic mfc = MifareClassic.get(tag);
-                    switch (mfc.getType()) {
-                        case MifareClassic.TYPE_CLASSIC:
-                            cardType.append("Classic");
-                            break;
+        // Sector check
+        StringBuilder sectorCheck = new StringBuilder("Sector check: \n");
 
-                        case MifareClassic.TYPE_PLUS:
-                            cardType.append("Plus");
-                            break;
+        int idx = 0;
+        for (String tech : tag.getTechList()) {
+            if (tech.equals(MifareClassic.class.getName())) {
+                // Mifare Classic
+                MifareClassic mfc = MifareClassic.get(tag);
+                switch (mfc.getType()) {
+                    case MifareClassic.TYPE_CLASSIC:
+                        cardType.append("Classic");
+                        break;
 
-                        case MifareClassic.TYPE_PRO:
-                            cardType.append("Pro");
-                            break;
+                    case MifareClassic.TYPE_PLUS:
+                        cardType.append("Plus");
+                        break;
 
-                        case MifareClassic.TYPE_UNKNOWN:
-                            cardType.append("Unknown");
-                            break;
-                    }
+                    case MifareClassic.TYPE_PRO:
+                        cardType.append("Pro");
+                        break;
 
-                    sectorAndBlock.append("Sectors: ").append(mfc.getSectorCount()).append("\n")
-                            .append("Blocks: ").append(mfc.getBlockCount()).append("\n")
-                            .append("Size: ").append(mfc.getSize()).append(" Bytes");
+                    case MifareClassic.TYPE_UNKNOWN:
+                        cardType.append("Unknown");
+                        break;
+                }
 
-                    try {
-                        // Enable I/O to the tag
-                        mfc.connect();
+                sectorAndBlock.append("Sectors: ").append(mfc.getSectorCount()).append("\n")
+                        .append("Blocks: ").append(mfc.getBlockCount()).append("\n")
+                        .append("Size: ").append(mfc.getSize()).append(" Bytes");
 
-                        for (int i = 0; i < mfc.getSectorCount(); ++i) {
-                            if (mfc.authenticateSectorWithKeyA(i, MifareClassic.KEY_DEFAULT)) {
-                                sectorCheck.append("Sector <").append(i).append("> with KeyA auth succ\n");
+                try {
+                    // Enable I/O to the tag
+                    mfc.connect();
 
-                                // Read block of sector
-                                final int blockIndex = mfc.sectorToBlock(i);
-                                for (int j = 0; j < mfc.getBlockCountInSector(i); ++j) {
-                                    byte[] blockData = mfc.readBlock(blockIndex + j);
-                                    sectorCheck.append("  Block <").append(blockIndex + j).append("> ")
-                                            .append(encodeHexString(blockData)).append("\n");
-                                }
+                    for (int i = 0; i < mfc.getSectorCount(); ++i) {
+                        if (mfc.authenticateSectorWithKeyA(i, MifareClassic.KEY_DEFAULT)) {
+                            sectorCheck.append("Sector <").append(i).append("> with KeyA auth succ\n");
 
-                            } else if (mfc.authenticateSectorWithKeyB(i, MifareClassic.KEY_DEFAULT)) {
-                                sectorCheck.append("Sector <").append(i).append("> with KeyB auth succ\n");
-
-                                // Read block of sector
-                                final int blockIndex = mfc.sectorToBlock(i);
-                                for (int j = 0; j < mfc.getBlockCountInSector(i); ++j) {
-                                    byte[] blockData = mfc.readBlock(blockIndex + j);
-                                    sectorCheck.append("  Block <").append(blockIndex + j).append("> ")
-                                            .append(encodeHexString(blockData)).append("\n");
-                                }
-                            } else {
-                                sectorCheck.append("Sector <").append(i).append("> auth failed\n");
+                            // Read block of sector
+                            final int blockIndex = mfc.sectorToBlock(i);
+                            for (int j = 0; j < mfc.getBlockCountInSector(i); ++j) {
+                                byte[] blockData = mfc.readBlock(blockIndex + j);
+                                sectorCheck.append("  Block <").append(blockIndex + j).append("> ")
+                                        .append(encodeHexString(blockData)).append("\n");
                             }
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        Toast.makeText(this, "Try again and keep NFC tag below device", Toast.LENGTH_LONG).show();
-                    }
-                } else if (tech.equals(MifareUltralight.class.getName())) {
-                    // Mifare Ultralight
-                    MifareUltralight mful = MifareUltralight.get(tag);
-                    switch (mful.getType()) {
-                        case MifareUltralight.TYPE_ULTRALIGHT:
-                            cardType.append("Ultralight");
-                            break;
 
-                        case MifareUltralight.TYPE_ULTRALIGHT_C:
-                            cardType.append("Ultralight C");
-                            break;
+                        } else if (mfc.authenticateSectorWithKeyB(i, MifareClassic.KEY_DEFAULT)) {
+                            sectorCheck.append("Sector <").append(i).append("> with KeyB auth succ\n");
 
-                        case MifareUltralight.TYPE_UNKNOWN:
-                            cardType.append("Unknown");
-                            break;
-                    }
-                }
-
-                String[] techPkgFields = tech.split("\\.");
-                if (techPkgFields.length > 0) {
-                    final String techName = techPkgFields[techPkgFields.length - 1];
-                    if (0 == idx++) {
-                        technologiesAvailable.append(techName);
-                    } else {
-                        technologiesAvailable.append(", ").append(techName);
-                    }
-                }
-            }
-
-            Log.i(TAG, "!!!!!!!!!there");
-
-            nfcInfo.append("\n").append(technologiesAvailable).append("\n")
-                    .append("\n").append(cardType).append("\n");
-
-            // NDEF Messages
-            StringBuilder sbNdefMessages = new StringBuilder("NDEF Messages: \n");
-            Parcelable[] rawMessages = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
-            if (rawMessages != null) {
-                NdefMessage[] messages = new NdefMessage[rawMessages.length];
-                for (int i = 0; i < rawMessages.length; ++i) {
-                    messages[i] = (NdefMessage) rawMessages[i];
-                }
-
-                for (NdefMessage message : messages) {
-                    for (NdefRecord record : message.getRecords()) {
-                        if (record.getTnf() == NdefRecord.TNF_WELL_KNOWN) {
-                            if (Arrays.equals(record.getType(), NdefRecord.RTD_TEXT)) {
-                                try {
-                                    // NFC Forum "Text Record Type Definition" section 3.2.1.
-                                    byte[] payload = record.getPayload();
-                                    String textEncoding = ((payload[0] & 0200) == 0) ? "UTF-8" : "UTF-16";
-                                    int languageCodeLength = payload[0] & 0077;
-                                    String languageCode = new String(payload, 1, languageCodeLength, "US-ASCII");
-                                    String text = new String(payload, languageCodeLength + 1,
-                                            payload.length - languageCodeLength - 1, textEncoding);
-                                    sbNdefMessages.append(" - ").append(languageCode).append(", ")
-                                            .append(textEncoding).append(", ").append(text).append("\n");
-                                } catch (UnsupportedEncodingException e) {
-                                    // should never happen unless we get a malformed tag.
-                                    throw new IllegalArgumentException(e);
-                                }
+                            // Read block of sector
+                            final int blockIndex = mfc.sectorToBlock(i);
+                            for (int j = 0; j < mfc.getBlockCountInSector(i); ++j) {
+                                byte[] blockData = mfc.readBlock(blockIndex + j);
+                                sectorCheck.append("  Block <").append(blockIndex + j).append("> ")
+                                        .append(encodeHexString(blockData)).append("\n");
                             }
+                        } else {
+                            sectorCheck.append("Sector <").append(i).append("> auth failed\n");
                         }
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Toast.makeText(this, "Try again and keep NFC tag below device", Toast.LENGTH_LONG).show();
+                }
+            } else if (tech.equals(MifareUltralight.class.getName())) {
+                // Mifare Ultralight
+                MifareUltralight mful = MifareUltralight.get(tag);
+                switch (mful.getType()) {
+                    case MifareUltralight.TYPE_ULTRALIGHT:
+                        cardType.append("Ultralight");
+                        break;
+
+                    case MifareUltralight.TYPE_ULTRALIGHT_C:
+                        cardType.append("Ultralight C");
+                        break;
+
+                    case MifareUltralight.TYPE_UNKNOWN:
+                        cardType.append("Unknown");
+                        break;
                 }
             }
 
-            nfcInfo.append("\n").append(sbNdefMessages).append("\n")
-                    .append("\n").append(sectorAndBlock).append("\n")
-                    .append("\n").append(sectorCheck).append("\n");
+            String[] techPkgFields = tech.split("\\.");
+            if (techPkgFields.length > 0) {
+                final String techName = techPkgFields[techPkgFields.length - 1];
+                if (0 == idx++) {
+                    technologiesAvailable.append(techName);
+                } else {
+                    technologiesAvailable.append(", ").append(techName);
+                }
+            }
+        }
 
-            if(nfcInfo.toString().isEmpty()) {
-                mNfcInfoText.setText("read nothing");
+        Log.i(TAG, "!!!!!!!!!there");
+
+        nfcInfo.append("\n").append(technologiesAvailable).append("\n")
+                .append("\n").append(cardType).append("\n");
+
+        // NDEF Messages
+        StringBuilder sbNdefMessages = new StringBuilder("NDEF Messages: \n");
+        Parcelable[] rawMessages = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+        if (rawMessages != null) {
+            NdefMessage[] messages = new NdefMessage[rawMessages.length];
+            for (int i = 0; i < rawMessages.length; ++i) {
+                messages[i] = (NdefMessage) rawMessages[i];
             }
-            else {
-                mNfcInfoText.setText(nfcInfo.toString());
+
+            for (NdefMessage message : messages) {
+                for (NdefRecord record : message.getRecords()) {
+                    if (record.getTnf() == NdefRecord.TNF_WELL_KNOWN) {
+                        if (Arrays.equals(record.getType(), NdefRecord.RTD_TEXT)) {
+                            try {
+                                // NFC Forum "Text Record Type Definition" section 3.2.1.
+                                byte[] payload = record.getPayload();
+                                String textEncoding = ((payload[0] & 0200) == 0) ? "UTF-8" : "UTF-16";
+                                int languageCodeLength = payload[0] & 0077;
+                                String languageCode = new String(payload, 1, languageCodeLength, "US-ASCII");
+                                String text = new String(payload, languageCodeLength + 1,
+                                        payload.length - languageCodeLength - 1, textEncoding);
+                                sbNdefMessages.append(" - ").append(languageCode).append(", ")
+                                        .append(textEncoding).append(", ").append(text).append("\n");
+                            } catch (UnsupportedEncodingException e) {
+                                // should never happen unless we get a malformed tag.
+                                throw new IllegalArgumentException(e);
+                            }
+                        }
+                    }
+                }
             }
+        }
+
+        nfcInfo.append("\n").append(sbNdefMessages).append("\n")
+                .append("\n").append(sectorAndBlock).append("\n")
+                .append("\n").append(sectorCheck).append("\n");
+
+        if(nfcInfo.toString().isEmpty()) {
+            mNfcInfoText.setText("read nothing");
+        }
+        else {
+            mNfcInfoText.setText(nfcInfo.toString());
         }
     }
         private String byteToHex(byte num) {
@@ -253,8 +262,8 @@ public class MainActivity extends AppCompatActivity {
              */
 
 
-    private void processIntent(Intent intent) {
-
-    }
+//    private void processIntent(Intent intent) {
+//
+//    }
 
 }
